@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, useNavigate, } from "react-router-dom";
 import axios from "axios";
 import {
   ArrowRight,
@@ -200,23 +200,128 @@ function FeatureCard({ icon, title, text }) {
 }
 
 function Login() {
+  const navigate = useNavigate();
+  const [formData, setFormData] = React.useState({
+    email: "",
+    password: "",
+  });
+
+  const [message, setMessage] = React.useState("");
+  const [error, setError] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+
+  const handleChange = (event) => {
+    setFormData({
+      ...formData,
+      [event.target.name]: event.target.value,
+    });
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    setMessage("");
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/login",
+        formData
+      );
+
+      setMessage(response.data.message);
+
+      // Save logged-in user
+      localStorage.setItem(
+        "famoraUser",
+        JSON.stringify(response.data.user)
+      );
+
+      navigate("/dashboard");
+
+      setFormData({
+        email: "",
+        password: "",
+      });
+    } catch (error) {
+      setError(
+        error.response?.data?.message ||
+          "Unable to log you in."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="simple-page">
+    <div className="auth-page">
       <Link to="/" className="logo">
         Famora
       </Link>
 
-      <div className="simple-content">
-        <p className="eyebrow">WELCOME BACK</p>
-        <h1>Log in to Famora</h1>
-        <p>
-          Your login form will be connected to the real authentication
-          system next.
-        </p>
+      <div className="auth-container">
+        <div className="auth-header">
+          <p className="eyebrow">WELCOME BACK</p>
 
-        <Link to="/" className="secondary-button">
-          Back to home
-        </Link>
+          <h1>Log in to Famora</h1>
+
+          <p>
+            Continue managing your household in one place.
+          </p>
+        </div>
+
+        <button className="google-button" type="button">
+          <span className="google-mark">G</span>
+          Continue with Google
+        </button>
+
+        <div className="auth-divider">
+          <span>or continue with email</span>
+        </div>
+
+        <form onSubmit={handleSubmit} className="auth-form">
+          <label>
+            Email address
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="you@example.com"
+              required
+            />
+          </label>
+
+          <label>
+            Password
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Enter your password"
+              required
+            />
+          </label>
+
+          {error && <p className="form-error">{error}</p>}
+
+          {message && <p className="form-success">{message}</p>}
+
+          <button
+            type="submit"
+            className="primary-button auth-submit"
+            disabled={loading}
+          >
+            {loading ? "Logging in..." : "Log in"}
+          </button>
+        </form>
+
+        <p className="auth-switch">
+          Don't have an account?{" "}
+          <Link to="/register">Create an account</Link>
+        </p>
       </div>
     </div>
   );
@@ -369,6 +474,198 @@ function Register() {
   );
 }
 
+function Dashboard() {
+  const user = JSON.parse(localStorage.getItem("famoraUser"));
+  
+  const [householdName, setHouseholdName] = React.useState("");
+  const [message, setMessage] = React.useState("");
+  const [error, setError] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const [household, setHousehold] = React.useState(null);
+  const [householdLoading, setHouseholdLoading] = React.useState(true);
+  
+  const [members, setMembers] = React.useState([]);
+  const [membersLoading, setMembersLoading] = React.useState(true);
+
+  const fetchHousehold = async () => {
+    if (!user?.id) {
+      setHouseholdLoading(false);
+      return;
+    }
+
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/api/households/${user.id}`
+      );
+
+      setHousehold(response.data.household);
+    } catch (error) {
+      if (error.response?.status !== 404) {
+        console.error("Get household error:", error);
+      }
+    } finally {
+      setHouseholdLoading(false);
+    }
+  };
+   
+
+  React.useEffect(() => {
+  const fetchMembers = async () => {
+    if (!household?._id) {
+      setMembersLoading(false);
+      return;
+    }
+
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/api/households/${household._id}/members`
+      );
+
+      setMembers(response.data.members);
+    } catch (error) {
+      console.error("Get members error:", error);
+    } finally {
+      setMembersLoading(false);
+    }
+  };
+
+  fetchMembers();
+}, [household]);
+
+
+  React.useEffect(() => {
+    fetchHousehold();
+  }, []);
+  
+    async function handleCreateHousehold(event) {
+    event.preventDefault();
+
+    setMessage("");
+    setError("");
+
+    if (!householdName.trim()) {
+      setError("Please enter a household name.");
+      return;
+    }
+
+    if (!user?.id) {
+      setError("User information not found. Please log in again.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/households",
+        {
+          name: householdName.trim(),
+          owner: user.id,
+        }
+      );
+
+      setMessage(response.data.message);
+      setHouseholdName("");
+    } catch (error) {
+      setError(
+        error.response?.data?.message ||
+        "Unable to create household."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="app">
+      <nav className="navbar">
+        <Link to="/" className="logo">
+          Famora
+        </Link>
+
+        <div className="nav-actions">
+          <span>{user?.name || "User"}</span>
+        </div>
+      </nav>
+
+      <main className="simple-page">
+        <div className="simple-content">
+          <p className="eyebrow">YOUR HOUSEHOLD</p>
+
+          <h1>
+            Welcome, {user?.name || "User"}.
+          </h1>
+
+          <p>
+            Your Famora household dashboard will appear here.
+            First, we'll set up your household and then connect
+            your finances, bills, groceries, goals, and investments.
+          </p>
+          {!household && !householdLoading && (
+          <form onSubmit={handleCreateHousehold} className="auth-form">
+            <label>
+            Household name
+            <input
+              type="text"
+              value={householdName}
+              onChange={(event) => setHouseholdName(event.target.value)}
+              placeholder="e.g. Shukla Family"
+             required
+            />
+           </label>
+
+          {error && <p className="form-error">{error}</p>}
+
+          {message && <p className="form-success">{message}</p>}
+
+          <button
+            type="submit"
+            className="primary-button auth-submit"
+            disabled={loading}
+          >
+            {loading ? "Creating..." : "Create Household"}
+          </button>
+        </form> 
+      )}
+        {householdLoading ? (
+             <p>Loading household...</p>
+            ) : household ? (
+                  <div>
+                      <p className="eyebrow">YOUR HOUSEHOLD</p>
+
+                      <h2>{household.name}</h2>
+
+                      <p>
+                        Household created successfully and connected to your account.
+                      </p>
+                   </div>
+                ) : null}
+                <div>
+                   <p className="eyebrow">HOUSEHOLD MEMBERS</p>
+
+                   {membersLoading ? (
+                    <p>Loading members...</p>
+                   ) : members.length > 0 ? (
+                     <div>
+                       {members.map((member) => (
+                        <div key={member._id}>
+                         <h3>{member.user.name}</h3>
+                         <p>{member.user.email}</p>
+                         <p>{member.role}</p>
+                        </div>
+                     ))}
+                    </div>
+                  ) : (
+                   <p>No household members found.</p>
+                  )}
+                </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+
 function App() {
   return (
     <BrowserRouter>
@@ -376,6 +673,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>
   );

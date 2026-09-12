@@ -4,6 +4,7 @@ const cors = require("cors");
 require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
+const householdRoutes = require("./routes/householdRoutes");
 const app = express();
 
 const PORT = process.env.PORT || 5000;
@@ -18,6 +19,7 @@ app.use(
 
 app.use(express.json());
 app.use("/api/auth", authRoutes);
+app.use("/api/households", householdRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
