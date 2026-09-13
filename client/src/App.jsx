@@ -666,6 +666,418 @@ function Dashboard() {
 }
 
 
+function Expenses() {
+  const user = JSON.parse(localStorage.getItem("famoraUser"));
+
+  const [expenses, setExpenses] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState("");
+  const [showAddForm, setShowAddForm] = React.useState(false);
+
+  const [formData, setFormData] = React.useState({
+     amount: "",
+     category: "Groceries",
+     date: "",
+     description: "",
+     paymentMethod: "UPI",
+     isRecurring: false,
+   });
+
+
+  const handleExpenseChange = (event) => {
+  const { name, value, type, checked } = event.target;
+
+   setFormData({
+     ...formData,
+     [name]: type === "checkbox" ? checked : value,
+   });
+  }; 
+
+  const handleExpenseSubmit = async (event) => {
+  event.preventDefault();
+
+  setError("");
+
+  try {
+    // Get the household belonging to the logged-in user
+    const householdResponse = await axios.get(
+      `http://localhost:5000/api/households/${user.id}`
+    );
+
+    const householdId = householdResponse.data.household?._id;
+
+    if (!householdId) {
+      setError("Household not found.");
+      return;
+    }
+
+    // Send the expense to the backend
+    await axios.post(
+      "http://localhost:5000/api/expenses",
+      {
+        household: householdId,
+        member: user.id,
+        amount: Number(formData.amount),
+        category: formData.category,
+        date: formData.date,
+        description: formData.description,
+        paymentMethod: formData.paymentMethod,
+        isRecurring: formData.isRecurring,
+      }
+    );
+
+    // Clear the form
+    setFormData({
+      amount: "",
+      category: "Groceries",
+      date: "",
+      description: "",
+      paymentMethod: "UPI",
+      isRecurring: false,
+    });
+
+    // Close the form
+    setShowAddForm(false);
+
+    // Fetch the updated expense list
+    await fetchExpenses();
+  } catch (error) {
+    console.error("Create expense error:", error);
+
+    setError(
+      error.response?.data?.message ||
+        "Unable to add expense."
+    );
+  }
+};
+
+const handleDeleteExpense = async (expenseId) => {
+  const confirmed = window.confirm(
+    "Are you sure you want to delete this expense?"
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    setError("");
+
+    await axios.delete(
+      `http://localhost:5000/api/expenses/${expenseId}`
+    );
+
+    await fetchExpenses();
+  } catch (error) {
+    console.error("Delete expense error:", error);
+
+    setError(
+      error.response?.data?.message ||
+        "Unable to delete expense."
+    );
+  }
+};
+
+  const fetchExpenses = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const householdResponse = await axios.get(
+        `http://localhost:5000/api/households/${user.id}`
+      );
+
+      const householdId = householdResponse.data.household?._id;
+
+      if (!householdId) {
+        setExpenses([]);
+        return;
+      }
+
+      const expenseResponse = await axios.get(
+        `http://localhost:5000/api/expenses/${householdId}`
+      );
+
+      setExpenses(expenseResponse.data.expenses || []);
+    } catch (error) {
+      console.error("Get expenses error:", error);
+
+      setError(
+        error.response?.data?.message ||
+          "Unable to load expenses."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (user?.id) {
+      fetchExpenses();
+    } else {
+      setLoading(false);
+      setError("User information not found. Please log in again.");
+    }
+  }, []);
+
+  const totalExpenses = expenses.reduce(
+    (total, expense) => total + expense.amount,
+    0
+  );
+
+  const recurringExpenses = expenses
+    .filter((expense) => expense.isRecurring)
+    .reduce((total, expense) => total + expense.amount, 0);
+
+  const groceryExpenses = expenses
+    .filter((expense) => expense.category === "Groceries")
+    .reduce((total, expense) => total + expense.amount, 0);
+
+  return (
+    <div className="expenses-page">
+      <Link to="/dashboard" className="logo">
+        Famora
+      </Link>
+
+      <header className="expenses-header">
+        <p className="eyebrow">HOUSEHOLD FINANCES</p>
+
+        <h1>Expenses</h1>
+
+        <p>
+          Keep track of where your household money is going.
+        </p>
+      </header>
+
+      {loading ? (
+        <div className="expenses-loading">
+          Loading your expenses...
+        </div>
+      ) : error ? (
+        <div className="expenses-empty">
+          <p className="form-error">{error}</p>
+        </div>
+      ) : (
+        <>
+          <section className="expenses-summary">
+            <div className="expense-summary-card">
+              <span>Total expenses</span>
+              <strong>₹{totalExpenses.toLocaleString("en-IN")}</strong>
+            </div>
+
+            <div className="expense-summary-card">
+              <span>Groceries</span>
+              <strong>₹{groceryExpenses.toLocaleString("en-IN")}</strong>
+            </div>
+
+            <div className="expense-summary-card">
+              <span>Recurring</span>
+              <strong>
+                ₹{recurringExpenses.toLocaleString("en-IN")}
+              </strong>
+            </div>
+          </section>
+
+          <section className="expenses-list-section">
+            <div className="expenses-list-heading">
+              <h2>Recent expenses</h2>
+
+              <button
+                 type = "button"
+                 className = "primary-button"
+                 onClick = {() => setShowAddForm(!showAddForm)}
+                 >
+                  {showAddForm ? "Close" : "+ Add Expense"}
+                 </button>
+            </div>
+            {showAddForm && (
+               <form
+                 className="expense-form"
+                 onSubmit={handleExpenseSubmit}
+              >
+               <div className="expense-form-grid">
+
+                <label>
+                  Amount
+                  <input
+                    type="number"
+                    name="amount"
+                    value={formData.amount}
+                    onChange={handleExpenseChange}
+                    placeholder="e.g. 2400"
+                    min="1"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Category
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleExpenseChange}
+                  >
+                    <option value="Food">Food</option>
+                    <option value="Groceries">Groceries</option>
+                    <option value="Transport">Transport</option>
+                    <option value="Fuel">Fuel</option>
+                    <option value="Shopping">Shopping</option>
+                    <option value="Education">Education</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Bills">Bills</option>
+                    <option value="Subscriptions">Subscriptions</option>
+                    <option value="EMI">EMI</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+
+                <label>
+                  Date
+                  <input
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleExpenseChange}
+                    required
+                  />
+                </label>
+
+                <label>
+                  Payment method
+                  <select
+                    name="paymentMethod"
+                    value={formData.paymentMethod}
+                    onChange={handleExpenseChange}
+                  >
+                     <option value="Cash">Cash</option>
+                     <option value="UPI">UPI</option>
+                     <option value="Debit Card">Debit Card</option>
+                     <option value="Credit Card">Credit Card</option>
+                     <option value="Bank Transfer">Bank Transfer</option>
+                     <option value="Other">Other</option>
+                   </select>
+                 </label>
+
+                 <label className="expense-form-full">
+                    Description
+                    <input
+                      type="text"
+                      name="description"
+                      value={formData.description}
+                      onChange={handleExpenseChange}
+                      placeholder="e.g. Monthly groceries"
+                    />
+                 </label>
+
+                 <label className="expense-checkbox">
+                   <input
+                     type="checkbox"
+                     name="isRecurring"
+                     checked={formData.isRecurring}
+                     onChange={handleExpenseChange}
+                   />
+
+                   Recurring expense
+                 </label>
+
+              </div>
+
+              <div className="expense-form-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setShowAddForm(false)}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="primary-button"
+                >
+                 Save Expense
+               </button>
+             </div>
+           </form>
+          )}
+            {expenses.length === 0 ? (
+              <div className="expenses-empty">
+                No expenses have been added yet.
+              </div>
+            ) : (
+              <div className="expenses-list">
+                {expenses.map((expense) => (
+                  <div
+                    key={expense._id}
+                    className="expense-item"
+                  >
+                    <div className="expense-main">
+                      <h3>{expense.category}</h3>
+
+                      <p>
+                        {expense.description || "No description"}
+                      </p>
+                    </div>
+
+                    <div className="expense-detail">
+                      <strong>
+                        {new Date(expense.date).toLocaleDateString(
+                          "en-IN"
+                        )}
+                      </strong>
+
+                      <span>Date</span>
+                    </div>
+
+                    <div className="expense-detail">
+                      <strong>{expense.paymentMethod}</strong>
+
+                      <span>Payment</span>
+                    </div>
+
+                    <div className="expense-detail">
+                      <strong>
+                        {expense.member?.name || "Unknown"}
+                      </strong>
+
+                      <span>Added by</span>
+                    </div>
+
+                    <div className="expense-amount">
+                      ₹{expense.amount.toLocaleString("en-IN")}
+                    </div>
+
+                     <button
+                        type = "button"
+                        className = "expense-delete-button"
+                        onClick = { () => handleDeleteExpense(expense._id)}
+                     >
+                       Delete
+                     </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <div className="expenses-footer">
+            <Link
+              to="/dashboard"
+              className="secondary-button"
+            >
+              Back to Dashboard
+            </Link>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+
+
+
 function App() {
   return (
     <BrowserRouter>
@@ -674,6 +1086,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/expenses" element={<Expenses />} />
       </Routes>
     </BrowserRouter>
   );
