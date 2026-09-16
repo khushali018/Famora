@@ -1075,6 +1075,407 @@ const handleDeleteExpense = async (expenseId) => {
   );
 }
 
+function Income() {
+  const user = JSON.parse(localStorage.getItem("famoraUser"));
+
+  const [income, setIncome] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState("");
+  const [showAddForm, setShowAddForm] = React.useState(false);
+  const [editingIncomeId, setEditingIncomeId] = React.useState(null);
+
+  const [formData, setFormData] = React.useState({
+    amount: "",
+    category: "Salary",
+    date: "",
+    description: "",
+    isRecurring: false,
+  });
+
+  const handleIncomeChange = (event) => {
+    const { name, value, type, checked } = event.target;
+
+    setFormData({
+      ...formData,
+      [name]: type === "checkbox" ? checked : value,
+    });
+
+};
+
+const handleIncomeSubmit = async (event) => {
+  event.preventDefault();
+
+  setError("");
+
+  try {
+    const householdResponse = await axios.get(
+      `http://localhost:5000/api/households/${user.id}`
+    );
+
+    const householdId = householdResponse.data.household?._id;
+
+    if (!householdId) {
+      setError("Household not found.");
+      return;
+    }
+
+   if (editingIncomeId) {
+      await axios.put(
+        `http://localhost:5000/api/income/${editingIncomeId}`,
+      {
+         amount: Number(formData.amount),
+         category: formData.category,
+         date: formData.date,
+         description: formData.description,
+         isRecurring: formData.isRecurring,
+      }
+    );
+  } else {
+    await axios.post(
+       "http://localhost:5000/api/income",
+      {
+        household: householdId,
+        member: user.id,
+        amount: Number(formData.amount),
+        category: formData.category,
+        date: formData.date,
+        description: formData.description,
+        isRecurring: formData.isRecurring,
+      }
+    );
+   }
+    setEditingIncomeId(null);
+    setFormData({
+      amount: "",
+      category: "Salary",
+      date: "",
+      description: "",
+      isRecurring: false,
+    });
+
+    setShowAddForm(false);
+
+    await fetchIncome();
+  } catch (error) {
+    console.error("Create income error:", error);
+
+    setError(
+      error.response?.data?.message ||
+        "Unable to add income."
+    );
+  }
+};
+
+const fetchIncome = async () => {
+  try {
+    setLoading(true);
+    setError("");
+
+    const householdResponse = await axios.get(
+      `http://localhost:5000/api/households/${user.id}`
+    );
+
+    const householdId = householdResponse.data.household?._id;
+
+    if (!householdId) {
+      setIncome([]);
+      return;
+    }
+
+    const incomeResponse = await axios.get(
+      `http://localhost:5000/api/income/${householdId}`
+    );
+
+    setIncome(incomeResponse.data.income || []);
+  } catch (error) {
+    console.error("Get income error:", error);
+
+    setError(
+      error.response?.data?.message ||
+        "Unable to load income."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleDeleteIncome = async (incomeId) => {
+  try {
+    setError("");
+
+    await axios.delete(
+      `http://localhost:5000/api/income/${incomeId}`
+    );
+
+    await fetchIncome();
+  } catch (error) {
+    console.error("Delete income error:", error);
+
+    setError(
+      error.response?.data?.message ||
+        "Unable to delete income."
+    );
+  }
+};
+
+const handleEditIncome = (record) => {
+  setEditingIncomeId(record._id);
+
+  setFormData({
+    amount: record.amount,
+    category: record.category,
+    date: record.date
+      ? new Date(record.date).toISOString().split("T")[0]
+      : "",
+    description: record.description || "",
+    isRecurring: record.isRecurring,
+  });
+
+  setShowAddForm(true);
+};
+
+React.useEffect(() => {
+  if (user?.id) {
+    fetchIncome();
+  } else {
+    setLoading(false);
+    setError("User information not found. Please log in again.");
+  }
+}, []);
+
+const totalIncome = income.reduce(
+  (total, record) => total + record.amount,
+  0
+);
+
+const recurringIncome = income
+  .filter((record) => record.isRecurring)
+  .reduce((total, record) => total + record.amount, 0);
+
+const salaryIncome = income
+  .filter((record) => record.category === "Salary")
+  .reduce((total, record) => total + record.amount, 0);
+
+return (
+  <div className="income-page">
+    <Link to="/dashboard" className="logo">
+      Famora
+    </Link>
+
+    <header className="income-header">
+      <p className="eyebrow">HOUSEHOLD FINANCES</p>
+
+      <h1>Income</h1>
+
+      <p>
+        Keep track of the money coming into your household.
+      </p>
+    </header>
+
+    <section className="income-summary">
+      <div className="income-summary-card">
+        <span>Total income</span>
+        <strong>
+          ₹{totalIncome.toLocaleString("en-IN")}
+        </strong>
+      </div>
+
+      <div className="income-summary-card">
+        <span>Salary</span>
+        <strong>
+          ₹{salaryIncome.toLocaleString("en-IN")}
+        </strong>
+      </div>
+
+      <div className="income-summary-card">
+        <span>Recurring</span>
+        <strong>
+          ₹{recurringIncome.toLocaleString("en-IN")}
+        </strong>
+      </div>
+    </section>
+
+    <section className="income-list-section">
+      <div className="income-list-heading">
+        <h2>Income history</h2>
+
+        <button
+          type="button"
+          className="primary-button"
+          onClick={() => setShowAddForm(!showAddForm)}
+        >
+          {showAddForm ? "Close" : editingIncomeId ? "Edit Income" : "+Add Income"}
+        </button>
+      </div>
+
+      {showAddForm && (
+        <form
+          className="income-form"
+          onSubmit={handleIncomeSubmit}
+        >
+          <div className="income-form-grid">
+
+            <label>
+              Amount
+              <input
+                type="number"
+                name="amount"
+                value={formData.amount}
+                onChange={handleIncomeChange}
+                placeholder="e.g. 50000"
+                min="1"
+                required
+              />
+            </label>
+
+            <label>
+              Category
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleIncomeChange}
+              >
+                <option value="Salary">Salary</option>
+                <option value="Freelance">Freelance</option>
+                <option value="Business">Business</option>
+                <option value="Rental">Rental</option>
+                <option value="Bonus">Bonus</option>
+                <option value="Interest">Interest</option>
+                <option value="Other">Other</option>
+              </select>
+            </label>
+
+            <label>
+              Date
+              <input
+                type="date"
+                name="date"
+                value={formData.date}
+                onChange={handleIncomeChange}
+                required
+              />
+            </label>
+
+            <label className="income-form-full">
+              Description
+              <input
+                type="text"
+                name="description"
+                value={formData.description}
+                onChange={handleIncomeChange}
+                placeholder="e.g. Monthly salary"
+              />
+            </label>
+
+            <label className="income-checkbox">
+              <input
+                type="checkbox"
+                name="isRecurring"
+                checked={formData.isRecurring}
+                onChange={handleIncomeChange}
+              />
+
+              Recurring income
+            </label>
+
+          </div>
+
+          <div className="income-form-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setShowAddForm(false)}
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              className="primary-button"
+            >
+              Save Income
+            </button>
+          </div>
+        </form>
+      )}
+            {loading ? (
+               <div className="income-empty">
+                  Loading your income...
+              </div>
+            ) : error ? (
+              <div className="income-empty">
+                <p className="form-error">{error}</p>
+              </div>
+            ) : income.length === 0 ? (
+              <div className="income-empty">
+                No income has been added yet.
+              </div>
+            ) : (
+              <div className="income-list">
+                {income.map((record) => (
+                  <div
+                    key={record._id}
+                    className="income-item"
+                  >
+                    <div className="income-main">
+                       <h3>{record.category}</h3>
+
+                      <p>
+                         {record.description || "No description"}
+                      </p>
+                    </div>
+
+                    <div className="income-detail">
+                      <strong>
+                       {new Date(record.date).toLocaleDateString(
+                          "en-IN"
+                       )}
+                     </strong>
+                     <span>Date</span>
+                    </div>
+
+                    <div className="income-detail">
+                      <strong>
+                        {record.member?.name || "Unknown"}
+                       </strong>
+                       <span>Added by</span>
+                    </div>
+
+                    <div className="income-detail">
+                      <strong>
+                       {record.isRecurring ? "Recurring" : "One-time"}
+                     </strong>
+                     <span>Type</span>
+                   </div>
+
+                   <div className="income-amount">
+                      ₹{record.amount.toLocaleString("en-IN")}
+                    </div>
+                    <button
+                       type = "button"
+                       className = "secondary-button"
+                       onClick = { () => handleEditIncome(record)}
+                       >
+                        Edit
+                       </button>
+                    <button
+                       type = "button"
+                       className = "secondary-button"
+                       onClick = {() => handleDeleteIncome(record._id)}
+                       >
+                        Delete
+                       </button>
+                 </div>
+               ))}
+             </div>
+           )}
+    </section>
+  </div>
+);
+
+
+}
+  
 
 
 
@@ -1087,6 +1488,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/expenses" element={<Expenses />} />
+        <Route path="/income" element={<Income />} />
       </Routes>
     </BrowserRouter>
   );
