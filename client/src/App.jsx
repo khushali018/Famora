@@ -1753,7 +1753,547 @@ return (
 
 }
   
+function Investments() {
+  const user = JSON.parse(localStorage.getItem("famoraUser"));
 
+  const [investments, setInvestments] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState("");
+  const [showAddForm, setShowAddForm] = React.useState(false);
+  const [editingInvestmentId, setEditingInvestmentId] =
+    React.useState(null);
+
+const [formData, setFormData] = React.useState({
+    type: "Fixed Deposit",
+    name: "",
+    institution: "",
+    investedAmount: "",
+    currentValue: "",
+    interestRate: "",
+    expectedReturn: "",
+    startDate: "",
+    maturityDate: "",
+    tenure: "",
+    status: "Active",
+    nominee: "",
+    description: "",
+  });
+
+const fetchInvestments = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const householdResponse = await axios.get(
+        `http://localhost:5000/api/households/${user.id}`
+      );
+
+      const householdId = householdResponse.data.household._id;
+
+      const response = await axios.get(
+        `http://localhost:5000/api/investments/${householdId}`
+      );
+
+      setInvestments(response.data.investments || []);
+    } catch (error) {
+      console.error("Get investments error:", error);
+
+      setError(
+        error.response?.data?.message ||
+          "Unable to load investments."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchInvestments();
+  }, []);
+
+const handleInvestmentChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  };
+  
+const handleDeleteInvestment = async (investmentId) => {
+  try {
+    setError("");
+
+    await axios.delete(
+      `http://localhost:5000/api/investments/${investmentId}`
+    );
+
+    await fetchInvestments();
+  } catch (error) {
+    console.error("Delete investment error:", error);
+
+    setError(
+      error.response?.data?.message ||
+        "Unable to delete investment."
+    );
+  }
+};
+
+const handleEditInvestment = (investment) => {
+  setEditingInvestmentId(investment._id);
+
+  setFormData({
+    type: investment.type,
+    name: investment.name,
+    institution: investment.institution || "",
+    investedAmount: investment.investedAmount,
+    currentValue: investment.currentValue,
+    interestRate: investment.interestRate ?? "",
+    expectedReturn: investment.expectedReturn ?? "",
+    startDate: investment.startDate
+      ? investment.startDate.slice(0, 10)
+      : "",
+    maturityDate: investment.maturityDate
+      ? investment.maturityDate.slice(0, 10)
+      : "",
+    tenure: investment.tenure || "",
+    status: investment.status || "Active",
+    nominee: investment.nominee || "",
+    description: investment.description || "",
+  });
+
+  setShowAddForm(true);
+};
+
+  const handleInvestmentSubmit = async (event) => {
+    event.preventDefault();
+
+    try {
+      setError("");
+
+      const householdResponse = await axios.get(
+        `http://localhost:5000/api/households/${user.id}`
+      );
+
+      const householdId = householdResponse.data.household._id;
+
+    const investmentData = {
+       household: householdId,
+       member: user.id,
+       type: formData.type,
+       name: formData.name,
+       institution: formData.institution,
+       investedAmount: Number(formData.investedAmount),
+       currentValue: Number(formData.currentValue),
+       interestRate:
+         formData.interestRate === ""
+           ? null
+           : Number(formData.interestRate),
+       expectedReturn:
+         formData.expectedReturn === ""
+           ? null
+           : Number(formData.expectedReturn),
+       startDate: formData.startDate,
+       maturityDate:
+         formData.maturityDate === ""
+           ? null
+           : formData.maturityDate,
+       tenure: formData.tenure,
+       status: formData.status,
+       nominee: formData.nominee,
+       description: formData.description,
+     };
+
+     if (editingInvestmentId) {
+       await axios.put(
+         `http://localhost:5000/api/investments/${editingInvestmentId}`,
+        investmentData
+      );
+    } else {
+      await axios.post(
+        "http://localhost:5000/api/investments",
+        investmentData
+      );
+    }
+
+      setFormData({
+        type: "Fixed Deposit",
+        name: "",
+        institution: "",
+        investedAmount: "",
+        currentValue: "",
+        interestRate: "",
+        expectedReturn: "",
+        startDate: "",
+        maturityDate: "",
+        tenure: "",
+        status: "Active",
+        nominee: "",
+        description: "",
+      });
+      
+      setEditingInvestmentId(null);
+      setShowAddForm(false);
+
+      await fetchInvestments();
+    } catch (error) {
+      console.error("Add investment error:", error);
+
+      setError(
+        error.response?.data?.message ||
+          "Unable to add investment."
+      );
+    }
+  };
+
+  const totalInvested = investments.reduce(
+    (total, investment) =>
+      total + investment.investedAmount,
+    0
+  );
+
+  const currentPortfolioValue = investments.reduce(
+    (total, investment) =>
+      total + investment.currentValue,
+    0
+  );
+
+  const totalProfitLoss =
+    currentPortfolioValue - totalInvested;
+
+  return (
+    <div className="simple-page">
+
+      <nav className="navbar">
+        <Link to="/dashboard" className="logo">
+          Famora
+        </Link>
+
+        <div className="nav-links">
+          <Link to="/income">Income</Link>
+          <Link to="/expenses">Expenses</Link>
+          <Link to="/investments">Investments</Link>
+          <Link to="/goals">Goals</Link>
+        </div>
+      </nav>
+
+      <main className="simple-content  investments-content">
+
+        <p className="eyebrow">HOUSEHOLD INVESTMENTS</p>
+
+        <h1>Investments</h1>
+
+        <p>
+          Track your household portfolio, returns and
+          investment maturity details in one place.
+        </p>
+
+        {error && (
+          <p className="form-error">
+            {error}
+          </p>
+        )}
+
+        <section className="dashboard-summary">
+
+          <div className="dashboard-summary-item">
+            <span>TOTAL INVESTED</span>
+            <strong>
+              ₹{totalInvested.toLocaleString("en-IN")}
+            </strong>
+          </div>
+
+          <div className="dashboard-summary-item">
+            <span>CURRENT VALUE</span>
+            <strong>
+              ₹{currentPortfolioValue.toLocaleString("en-IN")}
+            </strong>
+          </div>
+
+          <div className="dashboard-summary-item">
+            <span>PROFIT / LOSS</span>
+            <strong>
+              ₹{totalProfitLoss.toLocaleString("en-IN")}
+            </strong>
+          </div>
+
+          <div className="dashboard-summary-item">
+            <span>INVESTMENTS</span>
+            <strong>{investments.length}</strong>
+          </div>
+
+        </section>
+
+        <button
+          className="primary-button"
+          onClick={() => setShowAddForm(!showAddForm)}
+        >
+          {showAddForm ? "Close Form" : "Add Investment"}
+        </button>
+
+        {showAddForm && (
+          <form
+            className="simple-form"
+            onSubmit={handleInvestmentSubmit}
+          >
+
+            <h2>Add Investment</h2>
+
+            <label>
+              Investment Type
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleInvestmentChange}
+              >
+                <option>Mutual Fund</option>
+                <option>Stocks</option>
+                <option>Fixed Deposit</option>
+                <option>Recurring Deposit</option>
+                <option>Gold</option>
+                <option>PPF</option>
+                <option>NPS</option>
+                <option>Other</option>
+              </select>
+            </label>
+
+            <label>
+              Investment Name
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInvestmentChange}
+                placeholder="e.g. HDFC Fixed Deposit"
+                required
+              />
+            </label>
+
+            <label>
+              Institution
+              <input
+                type="text"
+                name="institution"
+                value={formData.institution}
+                onChange={handleInvestmentChange}
+                placeholder="e.g. HDFC Bank"
+              />
+            </label>
+
+            <label>
+              Invested Amount
+              <input
+                type="number"
+                name="investedAmount"
+                value={formData.investedAmount}
+                onChange={handleInvestmentChange}
+                min="0"
+                required
+              />
+            </label>
+
+            <label>
+              Current Value
+              <input
+                type="number"
+                name="currentValue"
+                value={formData.currentValue}
+                onChange={handleInvestmentChange}
+                min="0"
+                required
+              />
+            </label>
+
+            <label>
+              Interest Rate (%)
+              <input
+                type="number"
+                name="interestRate"
+                value={formData.interestRate}
+                onChange={handleInvestmentChange}
+                min="0"
+                step="0.01"
+              />
+            </label>
+
+            <label>
+              Expected Return
+              <input
+                type="number"
+                name="expectedReturn"
+                value={formData.expectedReturn}
+                onChange={handleInvestmentChange}
+                min="0"
+              />
+            </label>
+
+            <label>
+              Start Date
+              <input
+                type="date"
+                name="startDate"
+                value={formData.startDate}
+                onChange={handleInvestmentChange}
+                required
+              />
+            </label>
+
+            <label>
+              Maturity Date
+              <input
+                type="date"
+                name="maturityDate"
+                value={formData.maturityDate}
+                onChange={handleInvestmentChange}
+              />
+            </label>
+
+            <label>
+              Tenure
+              <input
+                type="text"
+                name="tenure"
+                value={formData.tenure}
+                onChange={handleInvestmentChange}
+                placeholder="e.g. 12 months"
+              />
+            </label>
+
+            <label>
+              Status
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleInvestmentChange}
+              >
+                <option>Active</option>
+                <option>Matured</option>
+              </select>
+            </label>
+
+            <label>
+              Nominee
+              <input
+                type="text"
+                name="nominee"
+                value={formData.nominee}
+                onChange={handleInvestmentChange}
+              />
+            </label>
+
+            <label>
+              Description
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInvestmentChange}
+                placeholder="Optional notes"
+              />
+            </label>
+
+            <button
+              type="submit"
+              className="primary-button"
+            >
+              Save Investment
+            </button>
+
+          </form>
+        )}
+
+        <section className="simple-list">
+
+          <h2>Investment History</h2>
+
+          {loading ? (
+            <p>Loading investments...</p>
+          ) : investments.length === 0 ? (
+            <p>No investments added yet.</p>
+          ) : (
+            investments.map((investment) => (
+              <div
+                key={investment._id}
+                className="simple-list-item"
+              >
+                <div>
+                  <strong>{investment.name}</strong>
+
+                  <p>
+                    {investment.type}
+                    {investment.institution
+                      ? ` · ${investment.institution}`
+                      : ""}
+                  </p>
+
+                  <p>
+                    Invested: ₹
+                    {investment.investedAmount.toLocaleString(
+                      "en-IN"
+                    )}
+                    {" · "}
+                    Current: ₹
+                    {investment.currentValue.toLocaleString(
+                      "en-IN"
+                    )}
+                  </p>
+
+                  {investment.maturityDate && (
+                    <p>
+                      Maturity:{" "}
+                      {new Date(
+                        investment.maturityDate
+                      ).toLocaleDateString("en-IN")}
+                    </p>
+                  )}
+
+                  {investment.nominee && (
+                     <p>
+                        Nominee: {investment.nominee}
+                    </p>
+                  )}
+
+                  {investment.description && (
+                   <p>
+                     Description: {investment.description}
+                  </p>
+                )}
+                </div>
+
+              <div className="simple-list-actions">
+               <strong>
+                 ₹
+                 {(
+                    investment.currentValue -
+                    investment.investedAmount
+                  ).toLocaleString("en-IN")}
+               </strong>
+
+               <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => handleEditInvestment(investment)}
+                >
+                  Edit
+                </button>
+
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => handleDeleteInvestment(investment._id)}
+                >
+                  Delete
+                </button>
+               </div> 
+              </div>
+            ))
+          )}
+
+        </section>
+
+      </main>
+    </div>
+  );
+}
 
 
 function App() {
@@ -1766,6 +2306,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/expenses" element={<Expenses />} />
         <Route path="/income" element={<Income />} />
+        <Route path="/investments" element={<Investments />} />
       </Routes>
     </BrowserRouter>
   );

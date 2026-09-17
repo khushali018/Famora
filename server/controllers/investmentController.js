@@ -92,7 +92,73 @@ const getInvestments = async (req, res) => {
   }
 };
 
+const updateInvestment = async (req, res) => {
+  try {
+    const { investmentId } = req.params;
+
+    const investment = await Investment.findByIdAndUpdate(
+      investmentId,
+      req.body,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!investment) {
+      return res.status(404).json({
+        success: false,
+        message: "Investment record not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Investment updated successfully.",
+      investment,
+    });
+  } catch (error) {
+    console.error("Update investment error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while updating investment.",
+    });
+  }
+};
+
+const deleteInvestment = async (req, res) => {
+  try {
+    const { investmentId } = req.params;
+
+    const investment = await Investment.findByIdAndDelete(
+      investmentId
+    );
+
+    if (!investment) {
+      return res.status(404).json({
+        success: false,
+        message: "Investment record not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Investment deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Delete investment error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while deleting investment.",
+    });
+  }
+};
+
 module.exports = {
   createInvestment,
   getInvestments,
+  updateInvestment,
+  deleteInvestment,
 };
