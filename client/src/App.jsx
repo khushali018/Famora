@@ -487,6 +487,10 @@ function Dashboard() {
   const [members, setMembers] = React.useState([]);
   const [membersLoading, setMembersLoading] = React.useState(true);
 
+  const [totalIncome, setTotalIncome] = React.useState(0);
+  const [totalExpenses, setTotalExpenses] = React.useState(0);
+  const householdBalance = totalIncome - totalExpenses;
+
   const fetchHousehold = async () => {
     if (!user?.id) {
       setHouseholdLoading(false);
@@ -508,6 +512,45 @@ function Dashboard() {
     }
   };
    
+const fetchIncome = async (householdId) => {
+  try {
+    const response = await axios.get(
+      `http://localhost:5000/api/income/${householdId}`
+    );
+
+    const incomeRecords = response.data.income || [];
+
+    const total = incomeRecords.reduce(
+      (sum, record) => sum + record.amount,
+      0
+    );
+
+    setTotalIncome(total);
+  } catch (error) {
+    console.error("Get dashboard income error:", error);
+    setTotalIncome(0);
+  }
+};
+
+const fetchExpenses = async (householdId) => {
+  try {
+    const response = await axios.get(
+      `http://localhost:5000/api/expenses/${householdId}`
+    );
+
+    const expenseRecords = response.data.expenses || [];
+
+    const total = expenseRecords.reduce(
+      (sum, record) => sum + record.amount,
+      0
+    );
+
+    setTotalExpenses(total);
+  } catch (error) {
+    console.error("Get dashboard expenses error:", error);
+    setTotalExpenses(0);
+  }
+};
 
   React.useEffect(() => {
   const fetchMembers = async () => {
@@ -530,6 +573,14 @@ function Dashboard() {
   };
 
   fetchMembers();
+
+  if (household?._id) {
+    fetchIncome(household._id);
+  }
+
+  if(household?._id){
+    fetchExpenses(household._id);
+  }
 }, [household]);
 
 
@@ -576,47 +627,95 @@ function Dashboard() {
     }
   }
 
-  return (
-    <div className="app">
-      <nav className="navbar">
-        <Link to="/" className="logo">
-          Famora
-        </Link>
+ return (
+  <div className="dashboard-page">
 
-        <div className="nav-actions">
-          <span>{user?.name || "User"}</span>
-        </div>
-      </nav>
+    {/* NAVBAR */}
+    <nav className="navbar dashboard-navbar">
 
-      <main className="simple-page">
-        <div className="simple-content">
-          <p className="eyebrow">YOUR HOUSEHOLD</p>
+      <Link to="/dashboard" className="logo">
+        Famora
+      </Link>
 
-          <h1>
-            Welcome, {user?.name || "User"}.
-          </h1>
+      <div className="nav-links">
+        <Link to="/income">Income</Link>
+        <Link to="/expenses">Expenses</Link>
+        <Link to="/investments">Investments</Link>
+        <Link to="/goals">Goals</Link>
+      </div>
 
-          <p>
-            Your Famora household dashboard will appear here.
-            First, we'll set up your household and then connect
-            your finances, bills, groceries, goals, and investments.
-          </p>
-          {!household && !householdLoading && (
-          <form onSubmit={handleCreateHousehold} className="auth-form">
-            <label>
+      <div className="dashboard-household">
+        {household?.name || "HOUSEHOLD"}
+      </div>
+
+    </nav>
+
+
+    {/* WELCOME SECTION */}
+    <section className="dashboard-welcome">
+
+      <p className="eyebrow">
+        YOUR HOUSEHOLD
+      </p>
+
+      <h1>
+        Welcome, {user?.name || "User"}.
+      </h1>
+
+      <p>
+        Everything your household earns, spends, grows and saves for —
+        in one calm place.
+      </p>
+
+    </section>
+
+
+    {/* HOUSEHOLD SETUP */}
+    {!household && !householdLoading && (
+      <section className="dashboard-setup">
+
+        <p className="eyebrow">
+          GET STARTED
+        </p>
+
+        <h2>
+          Create your household
+        </h2>
+
+        <p>
+          Set up your household to start managing your finances together.
+        </p>
+
+        <form
+          onSubmit={handleCreateHousehold}
+          className="auth-form"
+        >
+
+          <label>
             Household name
+
             <input
               type="text"
               value={householdName}
-              onChange={(event) => setHouseholdName(event.target.value)}
+              onChange={(event) =>
+                setHouseholdName(event.target.value)
+              }
               placeholder="e.g. Shukla Family"
-             required
+              required
             />
-           </label>
+          </label>
 
-          {error && <p className="form-error">{error}</p>}
+          {error && (
+            <p className="form-error">
+              {error}
+            </p>
+          )}
 
-          {message && <p className="form-success">{message}</p>}
+          {message && (
+            <p className="form-success">
+              {message}
+            </p>
+          )}
 
           <button
             type="submit"
@@ -625,44 +724,222 @@ function Dashboard() {
           >
             {loading ? "Creating..." : "Create Household"}
           </button>
-        </form> 
-      )}
-        {householdLoading ? (
-             <p>Loading household...</p>
-            ) : household ? (
-                  <div>
-                      <p className="eyebrow">YOUR HOUSEHOLD</p>
 
-                      <h2>{household.name}</h2>
+        </form>
 
-                      <p>
-                        Household created successfully and connected to your account.
-                      </p>
-                   </div>
-                ) : null}
-                <div>
-                   <p className="eyebrow">HOUSEHOLD MEMBERS</p>
+      </section>
+    )}
 
-                   {membersLoading ? (
-                    <p>Loading members...</p>
-                   ) : members.length > 0 ? (
-                     <div>
-                       {members.map((member) => (
-                        <div key={member._id}>
-                         <h3>{member.user.name}</h3>
-                         <p>{member.user.email}</p>
-                         <p>{member.role}</p>
-                        </div>
-                     ))}
-                    </div>
-                  ) : (
-                   <p>No household members found.</p>
-                  )}
-                </div>
+
+    {/* SUMMARY */}
+    {household && (
+      <section className="dashboard-summary">
+
+        <div className="dashboard-summary-item">
+          <span>HOUSEHOLD BALANCE</span>
+          <strong>₹{householdBalance.toLocaleString("en-IN")}</strong>
         </div>
-      </main>
-    </div>
-  );
+
+        <div className="dashboard-summary-item">
+          <span>SAVED THIS MONTH</span>
+          <strong>₹ —</strong>
+        </div>
+
+        <div className="dashboard-summary-item">
+          <span>INVESTED TO DATE</span>
+          <strong>₹ —</strong>
+        </div>
+
+        <div className="dashboard-summary-item">
+          <span>HOUSEHOLD MEMBERS</span>
+          <strong>{members.length}</strong>
+        </div>
+
+      </section>
+    )}
+
+
+    {/* FOUR MAIN FEATURES */}
+    {household && (
+      <section className="dashboard-features">
+
+        {/* INCOME */}
+        <Link
+          to="/income"
+          className="dashboard-feature-card"
+        >
+
+          <div className="dashboard-feature-top">
+            <span className="dashboard-feature-number">
+              FEATURE 01
+            </span>
+          </div>
+
+          <h2>Income</h2>
+
+          <strong className="dashboard-feature-value">
+            ₹{totalIncome.toLocaleString("en-IN")}
+          </strong>
+
+          <p className="dashboard-feature-description">
+            Money coming into your household.
+          </p>
+
+          <div className="dashboard-feature-line">
+            <span>Salary</span>
+            <span>View income</span>
+          </div>
+
+          <div className="dashboard-feature-line">
+            <span>Freelance</span>
+            <span>Manage</span>
+          </div>
+
+        </Link>
+
+
+        {/* EXPENSES */}
+        <Link
+          to="/expenses"
+          className="dashboard-feature-card"
+        >
+
+          <div className="dashboard-feature-top">
+            <span className="dashboard-feature-number">
+              FEATURE 02
+            </span>
+          </div>
+
+          <h2>Expenses</h2>
+
+          <strong className="dashboard-feature-value">
+            ₹{totalExpenses.toLocaleString("en-IN")}
+          </strong>
+
+          <p className="dashboard-feature-description">
+            Spending across your household.
+          </p>
+
+          <div className="dashboard-feature-line">
+            <span>Groceries</span>
+            <span>View expenses</span>
+          </div>
+
+          <div className="dashboard-feature-line">
+            <span>Food</span>
+            <span>Manage</span>
+          </div>
+
+        </Link>
+
+
+        {/* INVESTMENTS */}
+        <Link
+          to="/investments"
+          className="dashboard-feature-card"
+        >
+
+          <div className="dashboard-feature-top">
+            <span className="dashboard-feature-number">
+              FEATURE 03
+            </span>
+          </div>
+
+          <h2>Investments</h2>
+
+          <strong className="dashboard-feature-value">
+            ₹ —
+          </strong>
+
+          <p className="dashboard-feature-description">
+            Track your household investment portfolio.
+          </p>
+
+          <div className="dashboard-feature-line">
+            <span>Portfolio</span>
+            <span>Coming next</span>
+          </div>
+
+          <div className="dashboard-feature-line">
+            <span>Allocation</span>
+            <span>Manage</span>
+          </div>
+
+        </Link>
+
+
+        {/* GOALS */}
+        <Link
+          to="/goals"
+          className="dashboard-feature-card"
+        >
+
+          <div className="dashboard-feature-top">
+            <span className="dashboard-feature-number">
+              FEATURE 04
+            </span>
+          </div>
+
+          <h2>Goals</h2>
+
+          <strong className="dashboard-feature-value">
+            — active
+          </strong>
+
+          <p className="dashboard-feature-description">
+            Savings goals for the things that matter.
+          </p>
+
+          <div className="dashboard-feature-line">
+            <span>Emergency fund</span>
+            <span>Coming next</span>
+          </div>
+
+          <div className="dashboard-feature-line">
+            <span>Future goals</span>
+            <span>Manage</span>
+          </div>
+
+        </Link>
+
+      </section>
+    )}
+
+
+    {/* BOTTOM MESSAGE */}
+    <section className="dashboard-message">
+
+      <div className="dashboard-message-mark">
+        +
+      </div>
+
+      <h2>
+        Small, steady steps grow a
+        <br />
+        household.
+      </h2>
+
+      <p>
+        Famora keeps your household information together —
+        so your family can focus on living, not managing scattered records.
+      </p>
+
+    </section>
+
+
+    {/* FOOTER */}
+    <footer>
+
+      <span>Famora</span>
+
+      <span>
+        Income · Expenses · Investments · Goals
+      </span>
+
+    </footer>
+
+  </div>
+);
 }
 
 
