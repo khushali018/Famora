@@ -1717,3 +1717,248 @@ footer span:first-child {
     flex: 1;
   }
 }
+
+
+/* ================================
+   GOALS PAGE
+================================ */
+
+.goals-content {
+  max-width: 1100px;
+}
+
+.goals-content .dashboard-summary {
+  margin-top: 32px;
+}
+
+.goals-content .simple-form {
+  margin-top: 24px;
+}
+
+.goals-content .simple-list {
+  margin-top: 36px;
+}
+
+.goals-content .simple-list > h2 {
+  margin-bottom: 18px;
+}
+
+/* Goal card */
+
+.goals-content .goal-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 32px;
+  padding: 24px;
+  margin-bottom: 14px;
+  background: #f8f7f4;
+  border: 1px solid #ddd9d1;
+  border-radius: 12px;
+}
+
+.goals-content .goal-item strong {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 18px;
+  color: #18201d;
+}
+
+.goals-content .goal-item p {
+  margin: 5px 0;
+  color: #69716d;
+  font-size: 14px;
+}
+
+/* Progress bar */
+
+.goals-content .goal-progress-track {
+  width: 100%;
+  max-width: 520px;
+  height: 8px;
+  margin: 14px 0 8px;
+  background: #eeece7;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.goals-content .goal-progress-fill {
+  height: 100%;
+  background: #263c34;
+  border-radius: inherit;
+  transition: width 0.3s ease;
+}
+
+/* Goal actions */
+
+.goals-content .simple-list-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Mobile */
+
+@media (max-width: 700px) {
+  .goals-content .goal-item {
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .goals-content .goal-progress-track {
+    max-width: 100%;
+  }
+
+  .goals-content .simple-list-actions {
+    width: 100%;
+  }
+
+  .goals-content .simple-list-actions button {
+    flex: 1;
+  }
+}
+
+
+
+/* Goals form */
+
+.goals-content .simple-form {
+  padding: 28px;
+  margin-top: 24px;
+  background: #f8f7f4;
+  border: 1px solid #ddd9d1;
+  border-radius: 12px;
+}
+
+.goals-content .simple-form h2 {
+  margin: 0 0 24px;
+  color: #18201d;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.goals-content .simple-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+  color: #263c34;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.goals-content .simple-form input,
+.goals-content .simple-form select,
+.goals-content .simple-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #ddd9d1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #18201d;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.goals-content .simple-form input:focus,
+.goals-content .simple-form select:focus,
+.goals-content .simple-form textarea:focus {
+  border-color: #263c34;
+  box-shadow: 0 0 0 3px rgba(38, 60, 52, 0.08);
+}
+
+.goals-content .simple-form textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.goals-content .simple-form .primary-button {
+  margin-top: 6px;
+}
+
+/* Two-column layout for larger screens */
+
+@media (min-width: 701px) {
+  .goals-content .simple-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 24px;
+  }
+
+  .goals-content .simple-form h2 {
+    grid-column: 1 / -1;
+  }
+
+  .goals-content .simple-form label:last-of-type {
+    grid-column: 1 / -1;
+  }
+
+  .goals-content .simple-form .primary-button {
+    grid-column: 1 / -1;
+    justify-self: flex-start;
+  }
+}
+
+
+/* Common sticky Famora navbar */
+
+.dashboard-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.income-footer {
+  margin-top: 32px;
+}
+
+
+/* Investments page alignment */
+
+.investments-content {
+  text-align: left;
+}
+
+.investments-content > h1,
+.investments-content > p {
+  text-align: left;
+}
+
+.investments-content .dashboard-summary {
+  width: 100%;
+}
+
+.investments-content .simple-list {
+  width: 100%;
+}
+
+.investments-content .simple-list > h2 {
+  text-align: left;
+}
+
+.investments-content .primary-button {
+  margin-left: 0;
+}
+
+.investments-footer {
+  margin-top: 32px;
+}
+
+.investments-content > .primary-button {
+  display: block;
+  margin-left: auto;
+  margin-right: 0;
+}
+
+
+
+
+.expense-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}

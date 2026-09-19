@@ -474,6 +474,49 @@ function Register() {
   );
 }
 
+function FamoraNavbar() {
+  const user = JSON.parse(localStorage.getItem("famoraUser"));
+
+  const [household, setHousehold] = React.useState(null);
+
+  React.useEffect(() => {
+    const fetchHousehold = async () => {
+      if (!user?.id) return;
+
+      try {
+        const response = await axios.get(
+          `http://localhost:5000/api/households/${user.id}`
+        );
+
+        setHousehold(response.data.household);
+      } catch (error) {
+        console.error("Get navbar household error:", error);
+      }
+    };
+
+    fetchHousehold();
+  }, []);
+
+  return (
+    <nav className="navbar dashboard-navbar">
+      <Link to="/dashboard" className="logo">
+        Famora
+      </Link>
+
+      <div className="nav-links">
+        <Link to="/income">Income</Link>
+        <Link to="/expenses">Expenses</Link>
+        <Link to="/investments">Investments</Link>
+        <Link to="/goals">Goals</Link>
+      </div>
+
+      <div className="dashboard-household">
+        {household?.name || "HOUSEHOLD"}
+      </div>
+    </nav>
+  );
+}
+
 function Dashboard() {
   const user = JSON.parse(localStorage.getItem("famoraUser"));
   
@@ -489,6 +532,10 @@ function Dashboard() {
 
   const [totalIncome, setTotalIncome] = React.useState(0);
   const [totalExpenses, setTotalExpenses] = React.useState(0);
+  const [totalGoals, setTotalGoals] = React.useState(0);
+  const [activeGoals, setActiveGoals] = React.useState(0);
+  const [totalInvested, setTotalInvested] = React.useState(0);
+  const [currentInvestmentValue, setCurrentInvestmentValue] = React.useState(0);
   const householdBalance = totalIncome - totalExpenses;
 
   const fetchHousehold = async () => {
@@ -552,6 +599,57 @@ const fetchExpenses = async (householdId) => {
   }
 };
 
+const fetchGoals = async (householdId) => {
+  try {
+    const response = await axios.get(
+      `http://localhost:5000/api/goals/${householdId}`
+    );
+
+    const goals = response.data.goals || [];
+
+    setTotalGoals(goals.length);
+
+    setActiveGoals(
+      goals.filter((goal) => goal.status === "Active").length
+    );
+  } catch (error) {
+    console.error("Get dashboard goals error:", error);
+    setTotalGoals(0);
+    setActiveGoals(0);
+  }
+};
+
+const fetchInvestments = async (householdId) => {
+  try {
+    const response = await axios.get(
+      `http://localhost:5000/api/investments/${householdId}`
+    );
+
+    const investments = response.data.investments || [];
+
+    const investedTotal = investments.reduce(
+      (sum, investment) => sum + investment.investedAmount,
+      0
+    );
+
+    const currentValueTotal = investments.reduce(
+      (sum, investment) => sum + investment.currentValue,
+      0
+    );
+
+    setTotalInvested(investedTotal);
+    setCurrentInvestmentValue(currentValueTotal);
+  } catch (error) {
+    console.error(
+      "Get dashboard investments error:",
+      error
+    );
+
+    setTotalInvested(0);
+    setCurrentInvestmentValue(0);
+  }
+};
+
   React.useEffect(() => {
   const fetchMembers = async () => {
     if (!household?._id) {
@@ -580,6 +678,14 @@ const fetchExpenses = async (householdId) => {
 
   if(household?._id){
     fetchExpenses(household._id);
+  }
+
+  if(household?._id) {
+    fetchGoals(household._id);
+  }
+
+  if(household?._id) {
+    fetchInvestments(household._id);
   }
 }, [household]);
 
@@ -631,24 +737,7 @@ const fetchExpenses = async (householdId) => {
   <div className="dashboard-page">
 
     {/* NAVBAR */}
-    <nav className="navbar dashboard-navbar">
-
-      <Link to="/dashboard" className="logo">
-        Famora
-      </Link>
-
-      <div className="nav-links">
-        <Link to="/income">Income</Link>
-        <Link to="/expenses">Expenses</Link>
-        <Link to="/investments">Investments</Link>
-        <Link to="/goals">Goals</Link>
-      </div>
-
-      <div className="dashboard-household">
-        {household?.name || "HOUSEHOLD"}
-      </div>
-
-    </nav>
+  <FamoraNavbar />
 
 
     {/* WELCOME SECTION */}
@@ -848,7 +937,7 @@ const fetchExpenses = async (householdId) => {
           <h2>Investments</h2>
 
           <strong className="dashboard-feature-value">
-            ₹ —
+            ₹{currentInvestmentValue.toLocaleString("en-IN")}
           </strong>
 
           <p className="dashboard-feature-description">
@@ -883,7 +972,7 @@ const fetchExpenses = async (householdId) => {
           <h2>Goals</h2>
 
           <strong className="dashboard-feature-value">
-            — active
+            {activeGoals} active
           </strong>
 
           <p className="dashboard-feature-description">
@@ -950,6 +1039,7 @@ function Expenses() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
   const [showAddForm, setShowAddForm] = React.useState(false);
+  const [editingExpenseId, setEditingExpenseId] = React.useState(null);
 
   const [formData, setFormData] = React.useState({
      amount: "",
@@ -989,7 +1079,22 @@ function Expenses() {
     }
 
     // Send the expense to the backend
-    await axios.post(
+    if (editingExpenseId) {
+      await axios.put(
+        `http://localhost:5000/api/expenses/${editingExpenseId}`,
+        {
+          household: householdId,
+          member: user.id,
+          amount: Number(formData.amount),
+          category: formData.category,
+          date: formData.date,
+          description: formData.description,
+          paymentMethod: formData.paymentMethod,
+          isRecurring: formData.isRecurring,
+        }
+      );
+    } else {
+      await axios.post(
       "http://localhost:5000/api/expenses",
       {
         household: householdId,
@@ -1002,6 +1107,7 @@ function Expenses() {
         isRecurring: formData.isRecurring,
       }
     );
+   }
 
     // Clear the form
     setFormData({
@@ -1015,6 +1121,7 @@ function Expenses() {
 
     // Close the form
     setShowAddForm(false);
+    setEditingExpenseId(null);
 
     // Fetch the updated expense list
     await fetchExpenses();
@@ -1112,9 +1219,10 @@ const handleDeleteExpense = async (expenseId) => {
 
   return (
     <div className="expenses-page">
-      <Link to="/dashboard" className="logo">
-        Famora
-      </Link>
+      
+        <FamoraNavbar />
+
+        
 
       <header className="expenses-header">
         <p className="eyebrow">HOUSEHOLD FINANCES</p>
@@ -1324,14 +1432,38 @@ const handleDeleteExpense = async (expenseId) => {
                     <div className="expense-amount">
                       ₹{expense.amount.toLocaleString("en-IN")}
                     </div>
-
+                    <div className="expense-actions">
                      <button
-                        type = "button"
-                        className = "expense-delete-button"
-                        onClick = { () => handleDeleteExpense(expense._id)}
-                     >
-                       Delete
-                     </button>
+                       type="button"
+                       className="secondary-button"
+                       onClick={() => {
+                        setEditingExpenseId(expense._id);
+
+                        setFormData({
+                         amount: expense.amount,
+                         category: expense.category,
+                         date: expense.date
+                           ? expense.date.split("T")[0]
+                           : "",
+                         description: expense.description || "",
+                         paymentMethod: expense.paymentMethod || "Other",
+                         isRecurring: expense.isRecurring || false,
+                       });
+
+                       setShowAddForm(true);
+                     }}
+                    >
+                      Edit
+                   </button>
+
+                  <button
+                   type="button"
+                   className="expense-delete-button"
+                   onClick={() => handleDeleteExpense(expense._id)}
+                  >
+                    Delete
+                  </button>
+                </div>
                   </div>
                 ))}
               </div>
@@ -1535,9 +1667,7 @@ const salaryIncome = income
 
 return (
   <div className="income-page">
-    <Link to="/dashboard" className="logo">
-      Famora
-    </Link>
+    <FamoraNavbar />
 
     <header className="income-header">
       <p className="eyebrow">HOUSEHOLD FINANCES</p>
@@ -1746,6 +1876,14 @@ return (
                ))}
              </div>
            )}
+           <div className="income-footer">
+              <Link
+                to="/dashboard"
+                className="secondary-button"
+              >
+                Back to Dashboard
+              </Link>
+            </div>
     </section>
   </div>
 );
@@ -1964,18 +2102,7 @@ const handleEditInvestment = (investment) => {
   return (
     <div className="simple-page">
 
-      <nav className="navbar">
-        <Link to="/dashboard" className="logo">
-          Famora
-        </Link>
-
-        <div className="nav-links">
-          <Link to="/income">Income</Link>
-          <Link to="/expenses">Expenses</Link>
-          <Link to="/investments">Investments</Link>
-          <Link to="/goals">Goals</Link>
-        </div>
-      </nav>
+      <FamoraNavbar />
 
       <main className="simple-content  investments-content">
 
@@ -2289,8 +2416,501 @@ const handleEditInvestment = (investment) => {
           )}
 
         </section>
+        <div className="investments-footer">
+         <Link
+            to="/dashboard"
+            className="secondary-button"
+          >
+            Back to Dashboard
+          </Link>
+         </div>     
+      </main>
+    </div>
+  );
+}
+
+function Goals() {
+  const user = JSON.parse(localStorage.getItem("famoraUser"));
+
+  const [goals, setGoals] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState("");
+  const [showAddForm, setShowAddForm] = React.useState(false);
+  const [editingGoalId, setEditingGoalId] = React.useState(null);
+
+  const [formData, setFormData] = React.useState({
+    name: "",
+    category: "Emergency",
+    targetAmount: "",
+    currentAmount: "",
+    targetDate: "",
+    status: "Active",
+    description: "",
+  });
+
+  const fetchGoals = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const householdResponse = await axios.get(
+        `http://localhost:5000/api/households/${user.id}`
+      );
+
+      const householdId = householdResponse.data.household._id;
+
+      const response = await axios.get(
+        `http://localhost:5000/api/goals/${householdId}`
+      );
+
+      setGoals(response.data.goals || []);
+    } catch (error) {
+      console.error("Get goals error:", error);
+
+      setError(
+        error.response?.data?.message ||
+          "Unable to load goals."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchGoals();
+  }, []);
+
+  const handleGoalChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  };
+
+  const handleGoalSubmit = async (event) => {
+    event.preventDefault();
+
+    try {
+      setError("");
+
+      const householdResponse = await axios.get(
+        `http://localhost:5000/api/households/${user.id}`
+      );
+
+      const householdId = householdResponse.data.household._id;
+
+      const goalData = {
+        household: householdId,
+        member: user.id,
+        name: formData.name,
+        category: formData.category,
+        targetAmount: Number(formData.targetAmount),
+        currentAmount:
+          formData.currentAmount === ""
+            ? 0
+            : Number(formData.currentAmount),
+        targetDate:
+          formData.targetDate === ""
+            ? null
+            : formData.targetDate,
+        status: formData.status,
+        description: formData.description,
+      };
+
+      if (editingGoalId) {
+        await axios.put(
+          `http://localhost:5000/api/goals/${editingGoalId}`,
+          goalData
+        );
+      } else {
+        await axios.post(
+          "http://localhost:5000/api/goals",
+          goalData
+        );
+      }
+
+      setFormData({
+        name: "",
+        category: "Emergency",
+        targetAmount: "",
+        currentAmount: "",
+        targetDate: "",
+        status: "Active",
+        description: "",
+      });
+
+      setEditingGoalId(null);
+      setShowAddForm(false);
+
+      await fetchGoals();
+    } catch (error) {
+      console.error("Save goal error:", error);
+
+      setError(
+        error.response?.data?.message ||
+          "Unable to save goal."
+      );
+    }
+  };
+
+  const handleEditGoal = (goal) => {
+    setEditingGoalId(goal._id);
+
+    setFormData({
+      name: goal.name,
+      category: goal.category,
+      targetAmount: goal.targetAmount,
+      currentAmount: goal.currentAmount,
+      targetDate: goal.targetDate
+        ? goal.targetDate.slice(0, 10)
+        : "",
+      status: goal.status || "Active",
+      description: goal.description || "",
+    });
+
+    setShowAddForm(true);
+  };
+
+  const handleDeleteGoal = async (goalId) => {
+    try {
+      setError("");
+
+      await axios.delete(
+        `http://localhost:5000/api/goals/${goalId}`
+      );
+
+      await fetchGoals();
+    } catch (error) {
+      console.error("Delete goal error:", error);
+
+      setError(
+        error.response?.data?.message ||
+          "Unable to delete goal."
+      );
+    }
+  };
+
+  const totalGoals = goals.length;
+
+  const activeGoals = goals.filter(
+    (goal) => goal.status === "Active"
+  ).length;
+
+  const completedGoals = goals.filter(
+    (goal) => goal.status === "Completed"
+  ).length;
+
+  const totalSaved = goals.reduce(
+    (total, goal) => total + goal.currentAmount,
+    0
+  );
+
+  return (
+    <div className="simple-page">
+
+      <nav className="navbar">
+        <Link to="/dashboard" className="logo">
+          Famora
+        </Link>
+
+        <div className="nav-links">
+          <Link to="/income">Income</Link>
+          <Link to="/expenses">Expenses</Link>
+          <Link to="/investments">Investments</Link>
+          <Link to="/goals">Goals</Link>
+        </div>
+      </nav>
+
+      <main className="simple-content goals-content">
+
+        <p className="eyebrow">HOUSEHOLD SAVINGS</p>
+
+        <h1>Savings Goals</h1>
+
+        <p>
+          Set meaningful savings targets and track your
+          household progress in one place.
+        </p>
+
+        {error && (
+          <p className="form-error">
+            {error}
+          </p>
+        )}
+
+        <section className="dashboard-summary">
+
+          <div className="dashboard-summary-item">
+            <span>TOTAL GOALS</span>
+            <strong>{totalGoals}</strong>
+          </div>
+
+          <div className="dashboard-summary-item">
+            <span>ACTIVE GOALS</span>
+            <strong>{activeGoals}</strong>
+          </div>
+
+          <div className="dashboard-summary-item">
+            <span>COMPLETED</span>
+            <strong>{completedGoals}</strong>
+          </div>
+
+          <div className="dashboard-summary-item">
+            <span>TOTAL SAVED</span>
+            <strong>
+              ₹{totalSaved.toLocaleString("en-IN")}
+            </strong>
+          </div>
+
+        </section>
+
+        <button
+          className="primary-button"
+          onClick={() => {
+            setShowAddForm(!showAddForm);
+            setEditingGoalId(null);
+          }}
+        >
+          {showAddForm ? "Close Form" : "Create Goal"}
+        </button>
+
+        {showAddForm && (
+          <form
+            className="simple-form"
+            onSubmit={handleGoalSubmit}
+          >
+
+            <h2>
+              {editingGoalId
+                ? "Edit Goal"
+                : "Create Goal"}
+            </h2>
+
+            <label>
+              Goal Name
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleGoalChange}
+                placeholder="e.g. Emergency Fund"
+                required
+              />
+            </label>
+
+            <label>
+              Category
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleGoalChange}
+              >
+                <option>Emergency</option>
+                <option>Travel</option>
+                <option>Education</option>
+                <option>Personal</option>
+                <option>Vehicle</option>
+                <option>Home</option>
+                <option>Wedding</option>
+                <option>Other</option>
+              </select>
+            </label>
+
+            <label>
+              Target Amount
+              <input
+                type="number"
+                name="targetAmount"
+                value={formData.targetAmount}
+                onChange={handleGoalChange}
+                min="0"
+                required
+              />
+            </label>
+
+            <label>
+              Current Saved Amount
+              <input
+                type="number"
+                name="currentAmount"
+                value={formData.currentAmount}
+                onChange={handleGoalChange}
+                min="0"
+              />
+            </label>
+
+            <label>
+              Target Date
+              <input
+                type="date"
+                name="targetDate"
+                value={formData.targetDate}
+                onChange={handleGoalChange}
+              />
+            </label>
+
+            <label>
+              Status
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleGoalChange}
+              >
+                <option>Active</option>
+                <option>Completed</option>
+                <option>Paused</option>
+              </select>
+            </label>
+
+            <label>
+              Description
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleGoalChange}
+                placeholder="Optional notes"
+              />
+            </label>
+
+            <button
+              type="submit"
+              className="primary-button"
+            >
+              {editingGoalId
+                ? "Update Goal"
+                : "Save Goal"}
+            </button>
+
+          </form>
+        )}
+
+        <section className="simple-list">
+
+          <h2>Your Goals</h2>
+
+          {loading ? (
+            <p>Loading goals...</p>
+          ) : goals.length === 0 ? (
+            <p>No savings goals added yet.</p>
+          ) : (
+            goals.map((goal) => {
+
+              const progress =
+                goal.targetAmount > 0
+                  ? Math.min(
+                      (goal.currentAmount /
+                        goal.targetAmount) *
+                        100,
+                      100
+                    )
+                  : 0;
+
+              const remaining = Math.max(
+                goal.targetAmount -
+                  goal.currentAmount,
+                0
+              );
+
+              return (
+                <div
+                  key={goal._id}
+                  className="simple-list-item goal-item"
+                >
+
+                  <div>
+
+                    <strong>{goal.name}</strong>
+
+                    <p>
+                      {goal.category}
+                      {" · "}
+                      {goal.status}
+                    </p>
+
+                    <p>
+                      ₹
+                      {goal.currentAmount.toLocaleString(
+                        "en-IN"
+                      )}
+                      {" / ₹"}
+                      {goal.targetAmount.toLocaleString(
+                        "en-IN"
+                      )}
+                    </p>
+
+                    <div className="goal-progress-track">
+                      <div
+                        className="goal-progress-fill"
+                        style={{
+                          width: `${progress}%`,
+                        }}
+                      />
+                    </div>
+
+                    <p>
+                      {progress.toFixed(1)}% complete
+                      {" · "}
+                      ₹
+                      {remaining.toLocaleString(
+                        "en-IN"
+                      )}{" "}
+                      remaining
+                    </p>
+
+                    {goal.targetDate && (
+                      <p>
+                        Target:{" "}
+                        {new Date(
+                          goal.targetDate
+                        ).toLocaleDateString(
+                          "en-IN"
+                        )}
+                      </p>
+                    )}
+
+                    {goal.description && (
+                      <p>
+                        {goal.description}
+                      </p>
+                    )}
+
+                  </div>
+
+                  <div className="simple-list-actions">
+
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() =>
+                        handleEditGoal(goal)
+                      }
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() =>
+                        handleDeleteGoal(goal._id)
+                      }
+                    >
+                      Delete
+                    </button>
+
+                  </div>
+
+                </div>
+              );
+            })
+          )}
+
+        </section>
 
       </main>
+
     </div>
   );
 }
@@ -2307,6 +2927,7 @@ function App() {
         <Route path="/expenses" element={<Expenses />} />
         <Route path="/income" element={<Income />} />
         <Route path="/investments" element={<Investments />} />
+        <Route path="/goals" element={<Goals />} />
       </Routes>
     </BrowserRouter>
   );
