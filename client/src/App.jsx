@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Link, useNavigate, } from "react-router-dom";
 import axios from "axios";
+import API_URL from "./api";
 import {
   ArrowRight,
   Wallet,
@@ -226,7 +227,7 @@ function Login() {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/login",
+        `${API_URL}/api/auth/login`,
         formData
       );
 
@@ -355,7 +356,7 @@ function Register() {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/register",
+         `${API_URL}/api/auth/register`,
         formData
       );
 
@@ -485,7 +486,7 @@ function FamoraNavbar() {
 
       try {
         const response = await axios.get(
-          `http://localhost:5000/api/households/${user.id}`
+           `${API_URL}/api/households/${user.id}`
         );
 
         setHousehold(response.data.household);
@@ -577,7 +578,7 @@ function Dashboard() {
 
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/households/${user.id}`
+         `${API_URL}/api/households/${user.id}`
       );
 
       setHousehold(response.data.household);
@@ -593,7 +594,7 @@ function Dashboard() {
 const fetchIncome = async (householdId) => {
   try {
     const response = await axios.get(
-      `http://localhost:5000/api/income/${householdId}`
+      `${API_URL}/api/income/${householdId}`
     );
 
     const incomeRecords = response.data.income || [];
@@ -613,7 +614,7 @@ const fetchIncome = async (householdId) => {
 const fetchExpenses = async (householdId) => {
   try {
     const response = await axios.get(
-      `http://localhost:5000/api/expenses/${householdId}`
+      `${API_URL}/api/expenses/${householdId}`
     );
 
     const expenseRecords = response.data.expenses || [];
@@ -633,11 +634,11 @@ const fetchExpenses = async (householdId) => {
 const fetchMonthlySavings = async (householdId) => {
   try {
     const incomeResponse = await axios.get(
-      `http://localhost:5000/api/income/${householdId}`
+      `${API_URL}/api/income/${householdId}`
     );
 
     const expenseResponse = await axios.get(
-      `http://localhost:5000/api/expenses/${householdId}`
+       `${API_URL}/api/expenses/${householdId}`
     );
 
     const incomes = incomeResponse.data.income || [];
@@ -653,7 +654,7 @@ const fetchMonthlySavings = async (householdId) => {
 const fetchGoals = async (householdId) => {
   try {
     const response = await axios.get(
-      `http://localhost:5000/api/goals/${householdId}`
+      `${API_URL}/api/goals/${householdId}`
     );
 
     const goals = response.data.goals || [];
@@ -673,7 +674,7 @@ const fetchGoals = async (householdId) => {
 const fetchInvestments = async (householdId) => {
   try {
     const response = await axios.get(
-      `http://localhost:5000/api/investments/${householdId}`
+      `${API_URL}/api/investments/${householdId}`
     );
 
     const investments = response.data.investments || [];
@@ -710,7 +711,7 @@ const fetchInvestments = async (householdId) => {
 
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/households/${household._id}/members`
+         `${API_URL}/api/households/${household._id}/members`
       );
 
       setMembers(response.data.members);
@@ -769,7 +770,7 @@ const fetchInvestments = async (householdId) => {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/households",
+        `${API_URL}/api/households`,
         {
           name: householdName.trim(),
           owner: user.id,
@@ -1159,7 +1160,7 @@ function Expenses() {
   try {
     // Get the household belonging to the logged-in user
     const householdResponse = await axios.get(
-      `http://localhost:5000/api/households/${user.id}`
+       `${API_URL}/api/households/${user.id}`
     );
 
     const householdId = householdResponse.data.household?._id;
@@ -1172,7 +1173,7 @@ function Expenses() {
     // Send the expense to the backend
     if (editingExpenseId) {
       await axios.put(
-        `http://localhost:5000/api/expenses/${editingExpenseId}`,
+         `${API_URL}/api/expenses/${editingExpenseId}`,
         {
           household: householdId,
           member: user.id,
@@ -1186,7 +1187,7 @@ function Expenses() {
       );
     } else {
       await axios.post(
-      "http://localhost:5000/api/expenses",
+      `${API_URL}/api/expenses`,
       {
         household: householdId,
         member: user.id,
@@ -1239,7 +1240,7 @@ const handleDeleteExpense = async (expenseId) => {
     setError("");
 
     await axios.delete(
-      `http://localhost:5000/api/expenses/${expenseId}`
+     `${API_URL}/api/expenses/${expenseId}` 
     );
 
     await fetchExpenses();
@@ -1259,7 +1260,7 @@ const handleDeleteExpense = async (expenseId) => {
       setError("");
 
       const householdResponse = await axios.get(
-        `http://localhost:5000/api/households/${user.id}`
+        `${API_URL}/api/households/${user.id}`
       );
 
       const householdId = householdResponse.data.household?._id;
@@ -1270,7 +1271,7 @@ const handleDeleteExpense = async (expenseId) => {
       }
 
       const expenseResponse = await axios.get(
-        `http://localhost:5000/api/expenses/${householdId}`
+        `${API_URL}/api/expenses/${householdId}`
       );
 
       setExpenses(expenseResponse.data.expenses || []);
@@ -1609,7 +1610,7 @@ const handleIncomeSubmit = async (event) => {
 
   try {
     const householdResponse = await axios.get(
-      `http://localhost:5000/api/households/${user.id}`
+      `${API_URL}/api/households/${user.id}`
     );
 
     const householdId = householdResponse.data.household?._id;
@@ -1621,7 +1622,7 @@ const handleIncomeSubmit = async (event) => {
 
    if (editingIncomeId) {
       await axios.put(
-        `http://localhost:5000/api/income/${editingIncomeId}`,
+        `${API_URL}/api/income/${editingIncomeId}`,
       {
          amount: Number(formData.amount),
          category: formData.category,
@@ -1632,7 +1633,7 @@ const handleIncomeSubmit = async (event) => {
     );
   } else {
     await axios.post(
-       "http://localhost:5000/api/income",
+       `${API_URL}/api/income`,
       {
         household: householdId,
         member: user.id,
@@ -1672,7 +1673,7 @@ const fetchIncome = async () => {
     setError("");
 
     const householdResponse = await axios.get(
-      `http://localhost:5000/api/households/${user.id}`
+      `${API_URL}/api/households/${user.id}`
     );
 
     const householdId = householdResponse.data.household?._id;
@@ -1683,7 +1684,7 @@ const fetchIncome = async () => {
     }
 
     const incomeResponse = await axios.get(
-      `http://localhost:5000/api/income/${householdId}`
+      `${API_URL}/api/income/${householdId}`
     );
 
     setIncome(incomeResponse.data.income || []);
@@ -1704,7 +1705,7 @@ const handleDeleteIncome = async (incomeId) => {
     setError("");
 
     await axios.delete(
-      `http://localhost:5000/api/income/${incomeId}`
+      `${API_URL}/api/income/${incomeId}`
     );
 
     await fetchIncome();
@@ -2014,13 +2015,13 @@ const fetchInvestments = async () => {
       setError("");
 
       const householdResponse = await axios.get(
-        `http://localhost:5000/api/households/${user.id}`
+        `${API_URL}/api/households/${user.id}`
       );
 
       const householdId = householdResponse.data.household._id;
 
       const response = await axios.get(
-        `http://localhost:5000/api/investments/${householdId}`
+        `${API_URL}/api/investments/${householdId}`
       );
 
       setInvestments(response.data.investments || []);
@@ -2054,7 +2055,7 @@ const handleDeleteInvestment = async (investmentId) => {
     setError("");
 
     await axios.delete(
-      `http://localhost:5000/api/investments/${investmentId}`
+      `${API_URL}/api/investments/${investmentId}`
     );
 
     await fetchInvestments();
@@ -2101,7 +2102,7 @@ const handleEditInvestment = (investment) => {
       setError("");
 
       const householdResponse = await axios.get(
-        `http://localhost:5000/api/households/${user.id}`
+        `${API_URL}/api/households/${user.id}`
       );
 
       const householdId = householdResponse.data.household._id;
@@ -2135,12 +2136,12 @@ const handleEditInvestment = (investment) => {
 
      if (editingInvestmentId) {
        await axios.put(
-         `http://localhost:5000/api/investments/${editingInvestmentId}`,
+         `${API_URL}/api/investments/${editingInvestmentId}`,
         investmentData
       );
     } else {
       await axios.post(
-        "http://localhost:5000/api/investments",
+        `${API_URL}/api/investments`,
         investmentData
       );
     }
@@ -2545,13 +2546,13 @@ function Goals() {
       setError("");
 
       const householdResponse = await axios.get(
-        `http://localhost:5000/api/households/${user.id}`
+        `${API_URL}/api/households/${user.id}`
       );
 
       const householdId = householdResponse.data.household._id;
 
       const response = await axios.get(
-        `http://localhost:5000/api/goals/${householdId}`
+        `${API_URL}/api/goals/${householdId}`
       );
 
       setGoals(response.data.goals || []);
@@ -2587,7 +2588,7 @@ function Goals() {
       setError("");
 
       const householdResponse = await axios.get(
-        `http://localhost:5000/api/households/${user.id}`
+        `${API_URL}/api/households/${user.id}`
       );
 
       const householdId = householdResponse.data.household._id;
@@ -2612,12 +2613,12 @@ function Goals() {
 
       if (editingGoalId) {
         await axios.put(
-          `http://localhost:5000/api/goals/${editingGoalId}`,
+          `${API_URL}/api/goals/${editingGoalId}`,
           goalData
         );
       } else {
         await axios.post(
-          "http://localhost:5000/api/goals",
+          `${API_URL}/api/goals`,
           goalData
         );
       }
@@ -2671,7 +2672,7 @@ function Goals() {
       setError("");
 
       await axios.delete(
-        `http://localhost:5000/api/goals/${goalId}`
+        `${API_URL}/api/goals/${goalId}`
       );
 
       await fetchGoals();
