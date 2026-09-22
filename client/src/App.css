@@ -1962,3 +1962,102 @@ footer span:first-child {
   gap: 8px;
   white-space: nowrap;
 }
+
+.goal-item .simple-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+/* Goals page layout alignment */
+.goals-content {
+  text-align: left;
+}
+
+.goals-content > h1,
+.goals-content > p {
+  text-align: left;
+}
+
+.goals-content .dashboard-summary {
+  width: 100%;
+}
+
+.goals-content > .primary-button {
+  display: block;
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.goals-content .simple-list {
+  width: 100%;
+}
+
+.goals-content .simple-list > h2 {
+  text-align: left;
+}
+
+.goals-content .simple-form {
+  width: 100%;
+  text-align: left;
+}
+
+.goal-item .simple-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.goals-footer {
+  margin-top: 32px;
+  text-align: left;
+}
+
+.dashboard-members {
+  margin-top: 48px;
+  width: 100%;
+  text-align: center;
+}
+
+.dashboard-members-heading {
+  margin-bottom: 20px;
+}
+
+.dashboard-members-heading h2 {
+  margin: 0;
+  font-size: 32px;
+}
+
+.dashboard-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.dashboard-member-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 22px 24px;
+  background: #ffffff;
+  border: 1px solid #ddd9d1;
+  border-radius: 12px;
+}
+
+.dashboard-member-item > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.dashboard-member-role {
+  color: #263c34 !important;
+  font-weight: 600;
+  text-transform: capitalize;
+}

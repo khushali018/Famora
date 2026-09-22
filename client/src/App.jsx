@@ -532,6 +532,37 @@ function Dashboard() {
 
   const [totalIncome, setTotalIncome] = React.useState(0);
   const [totalExpenses, setTotalExpenses] = React.useState(0);
+  const [monthlySavings, setMonthlySavings] = React.useState(0);
+  const calculateMonthlySavings = (incomes, expenses) => {
+  const now = new Date();
+
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const monthlyIncome = incomes
+    .filter((income) => {
+      const date = new Date(income.date);
+
+      return (
+        date.getMonth() === currentMonth &&
+        date.getFullYear() === currentYear
+      );
+    })
+    .reduce((total, income) => total + income.amount, 0);
+
+  const monthlyExpenses = expenses
+    .filter((expense) => {
+      const date = new Date(expense.date);
+
+      return (
+        date.getMonth() === currentMonth &&
+        date.getFullYear() === currentYear
+      );
+    })
+    .reduce((total, expense) => total + expense.amount, 0);
+
+  setMonthlySavings(monthlyIncome - monthlyExpenses);
+};
   const [totalGoals, setTotalGoals] = React.useState(0);
   const [activeGoals, setActiveGoals] = React.useState(0);
   const [totalInvested, setTotalInvested] = React.useState(0);
@@ -596,6 +627,26 @@ const fetchExpenses = async (householdId) => {
   } catch (error) {
     console.error("Get dashboard expenses error:", error);
     setTotalExpenses(0);
+  }
+};
+
+const fetchMonthlySavings = async (householdId) => {
+  try {
+    const incomeResponse = await axios.get(
+      `http://localhost:5000/api/income/${householdId}`
+    );
+
+    const expenseResponse = await axios.get(
+      `http://localhost:5000/api/expenses/${householdId}`
+    );
+
+    const incomes = incomeResponse.data.income || [];
+    const expenses = expenseResponse.data.expenses || [];
+
+    calculateMonthlySavings(incomes, expenses);
+  } catch (error) {
+    console.error("Calculate monthly savings error:", error);
+    setMonthlySavings(0);
   }
 };
 
@@ -678,6 +729,10 @@ const fetchInvestments = async (householdId) => {
 
   if(household?._id){
     fetchExpenses(household._id);
+  }
+
+  if(household?._id) {
+    fetchMonthlySavings(household._id);
   }
 
   if(household?._id) {
@@ -831,18 +886,54 @@ const fetchInvestments = async (householdId) => {
 
         <div className="dashboard-summary-item">
           <span>SAVED THIS MONTH</span>
-          <strong>₹ —</strong>
+          <strong>₹{monthlySavings.toLocaleString("en-IN")}</strong>
         </div>
 
         <div className="dashboard-summary-item">
           <span>INVESTED TO DATE</span>
-          <strong>₹ —</strong>
+          <strong>₹{totalInvested.toLocaleString("en-IN")}</strong>
         </div>
 
         <div className="dashboard-summary-item">
           <span>HOUSEHOLD MEMBERS</span>
           <strong>{members.length}</strong>
         </div>
+
+      </section>
+    )}
+      {household && (
+         <section className="dashboard-members">
+
+         <div className="dashboard-members-heading">
+           <div>
+             <p className="eyebrow">HOUSEHOLD</p>
+             <h2>Members</h2>
+           </div>
+         </div>
+
+         {membersLoading ? (
+           <p>Loading members...</p>
+         ) : members.length === 0 ? (
+           <p>No household members found.</p>
+          ) : (
+            <div className="dashboard-members-list">
+              {members.map((member) => (
+                <div
+                  key={member._id}
+                  className="dashboard-member-item"
+                >
+                 <div>
+                   <strong>{member.user?.name}</strong>
+                   <span>{member.user?.email}</span>
+                 </div>
+
+                 <span className="dashboard-member-role">
+                  {member.role}
+                </span>
+               </div>
+             ))}
+          </div>
+        )}
 
       </section>
     )}
@@ -2556,22 +2647,24 @@ function Goals() {
   };
 
   const handleEditGoal = (goal) => {
-    setEditingGoalId(goal._id);
+  console.log("EDIT CLICKED", goal);
 
-    setFormData({
-      name: goal.name,
-      category: goal.category,
-      targetAmount: goal.targetAmount,
-      currentAmount: goal.currentAmount,
-      targetDate: goal.targetDate
-        ? goal.targetDate.slice(0, 10)
-        : "",
-      status: goal.status || "Active",
-      description: goal.description || "",
-    });
+  setEditingGoalId(goal._id);
 
-    setShowAddForm(true);
-  };
+  setFormData({
+    name: goal.name,
+    category: goal.category,
+    targetAmount: goal.targetAmount,
+    currentAmount: goal.currentAmount,
+    targetDate: goal.targetDate
+      ? goal.targetDate.slice(0, 10)
+      : "",
+    status: goal.status || "Active",
+    description: goal.description || "",
+  });
+
+  setShowAddForm(true);
+};
 
   const handleDeleteGoal = async (goalId) => {
     try {
@@ -2610,18 +2703,7 @@ function Goals() {
   return (
     <div className="simple-page">
 
-      <nav className="navbar">
-        <Link to="/dashboard" className="logo">
-          Famora
-        </Link>
-
-        <div className="nav-links">
-          <Link to="/income">Income</Link>
-          <Link to="/expenses">Expenses</Link>
-          <Link to="/investments">Investments</Link>
-          <Link to="/goals">Goals</Link>
-        </div>
-      </nav>
+      <FamoraNavbar />
 
       <main className="simple-content goals-content">
 
@@ -2883,12 +2965,12 @@ function Goals() {
                     <button
                       type="button"
                       className="secondary-button"
-                      onClick={() =>
-                        handleEditGoal(goal)
-                      }
-                    >
+                      onClick={() => handleEditGoal(goal) }
+                    >      
                       Edit
                     </button>
+                      
+                  
 
                     <button
                       type="button"
@@ -2908,6 +2990,14 @@ function Goals() {
           )}
 
         </section>
+        <div className="goals-footer">
+           <Link
+             to="/dashboard"
+             className="secondary-button"
+            >
+              Back to Dashboard
+            </Link>
+          </div>
 
       </main>
 
